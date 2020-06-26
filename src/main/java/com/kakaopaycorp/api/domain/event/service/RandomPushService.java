@@ -41,7 +41,7 @@ public class RandomPushService {
 	}
 
 	/**
-	 * 뿌리기 분배
+	 * 뿌리기 금액 분배
 	 *
 	 * @param requestDto
 	 * @return
@@ -109,6 +109,13 @@ public class RandomPushService {
 		return randomPushRepository.findBy(searchDto);
 	}
 
+	/**
+	 * 뿌리기 검증
+	 *
+	 * @param existRandomPush
+	 * @param randomPush
+	 * @return
+	 */
 	public boolean validate(RandomPush existRandomPush, RandomPush randomPush) {
 
 		// 등록 사용자와 동일한 사용자인지 검증
@@ -117,11 +124,20 @@ public class RandomPushService {
 		}
 		List<RandomPushDetail> usedRandomPushDetails =
 				existRandomPush.getDetails().stream()
-							   .filter(detail -> detail.getRegistUserId().equals(randomPush.getRegistUserId()))
+							   .filter(RandomPushDetail::isUseYn)
 							   .collect(Collectors.toList());
 
+		// 사용할 수 있는 받기 목록이 없음
+		if (CollectionUtils.isEmpty(usedRandomPushDetails)) {
+			return false;
+		}
+
+		long matchedUserCount = usedRandomPushDetails.stream()
+													 .filter(detail -> detail.getPublishUserId().equals(randomPush.getRegistUserId()))
+													 .count();
+
 		// 뿌리기당 사용자는 한번만 받을 수 있음
-		if (!CollectionUtils.isEmpty(usedRandomPushDetails)) {
+		if (matchedUserCount > 0) {
 			return false;
 		}
 
@@ -134,23 +150,37 @@ public class RandomPushService {
 	}
 
 
-	public Integer publishToken(RandomPush existRandomPush, RandomPush randomPush) {
+	/**
+	 * 뿌리기 발급
+	 *
+	 * @param existRandomPush
+	 * @param randomPush
+	 * @return
+	 */
+	public Integer publish(RandomPush existRandomPush, RandomPush randomPush) {
 		List<RandomPushDetail> details = existRandomPush.getDetails();
 
-		List<RandomPushDetail> usableDetails = details.stream().filter(detail -> !detail.isUseYn()).collect(Collectors.toList());
-		if (CollectionUtils.isEmpty(usableDetails)) {
-			throw new IllegalArgumentException("usableDetails is empty! radomPushNo : " + randomPush.getRandomPushNo());
-		}
-
+		List<RandomPushDetail> usableDetails = details.stream()
+													  .filter(detail -> !detail.isUseYn())
+													  .collect(Collectors.toList());
 		RandomPushDetail detail = usableDetails.get(0);
+
 		detail.publish(randomPush.getRegistUserId());
+
 		randomPushDetailRepository.save(detail);
+		randomPushRepository.increasePublishedPrice(detail.getPublishedPrice());
+
 		return detail.getPublishedPrice();
 	}
 
-	public boolean isExpired(RandomPushRequestDto requestDto) {
-		RandomPush randomPush = randomPushRepository.findBy(new RandomPushSearchDto(requestDto.getToken(), requestDto.getRoomId(), null));
-		return randomPush.getRegistDateTime().plusMinutes(10).isBefore(LocalDateTime.now());
+	/**
+	 * 뿌린 건 유효시간 만료 체크
+	 *
+	 * @param randomPush
+	 * @return
+	 */
+	public boolean isExpired(RandomPush randomPush) {
+		return LocalDateTime.now().minusMinutes(10).isAfter(randomPush.getRegistDateTime());
 	}
 
 	/**
@@ -158,7 +188,7 @@ public class RandomPushService {
 	 *
 	 * @return
 	 */
-	public String publishToken(RandomPushRequestDto requestDto) {
+	public String publishToken() {
 		String token = TokenKeygen.publishToken();
 		return getHashKeyBy(token);
 	}

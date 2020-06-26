@@ -6,6 +6,7 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
 
@@ -14,6 +15,7 @@ import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
  * 뿌리기
  */
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Builder
 public class RandomPush {

@@ -8,6 +8,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class RandomPushRequestDto {
+	/**
+	 * 토큰
+	 */
 	private String token;
 	/**
 	 * 뿌릴 금액

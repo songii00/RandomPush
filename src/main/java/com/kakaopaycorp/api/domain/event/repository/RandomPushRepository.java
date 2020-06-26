@@ -15,4 +15,8 @@ public class RandomPushRepository {
 	public RandomPush findBy(RandomPushSearchDto searchDto) {
 		return null;
 	}
+
+	public void increasePublishedPrice(Integer publishedPrice) {
+		// 받기 완료 금액 증가
+	}
 }

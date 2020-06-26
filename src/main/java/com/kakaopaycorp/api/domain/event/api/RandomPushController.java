@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.kakaopaycorp.api.domain.event.dto.ApiResult;
+import com.kakaopaycorp.api.domain.event.dto.ApiResultDto;
 import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
 import com.kakaopaycorp.api.domain.event.dto.RandomPushSearchDto;
 import com.kakaopaycorp.api.domain.event.dto.RandomPushStatusDto;
@@ -31,13 +31,13 @@ public class RandomPushController {
 	 * @return
 	 */
 	@GetMapping("/price")
-	public ApiResult getRandomPushPrice(@ModelAttribute RandomPushRequestDto requestDto) {
+	public ApiResultDto getRandomPushPrice(@ModelAttribute RandomPushRequestDto requestDto) {
 		// 토큰 가져오기
-		String token = randomPushService.publishToken(requestDto);
+		String token = randomPushService.publishToken();
 		requestDto.setToken(token);
 		// 뿌리기 저장
 		randomPushService.save(requestDto);
-		return new ApiResult<>(token);
+		return new ApiResultDto<>(token);
 	}
 
 	/**
@@ -46,25 +46,24 @@ public class RandomPushController {
 	 * @return
 	 */
 	@PostMapping("/publish")
-	public ApiResult<Integer> publish(@RequestBody RandomPushRequestDto requestDto) {
-
-		// 토큰 만료 체크
-		if (randomPushService.isExpired(requestDto)) {
-			return ApiResult.fail("token is expired");
-		}
-
-		// 검증
+	public ApiResultDto<Integer> publish(@RequestBody RandomPushRequestDto requestDto) {
 		RandomPush existRandomPush = randomPushService.getRandomPush(new RandomPushSearchDto(requestDto.getToken(),
 																							 requestDto.getRoomId(),
 																							 null));
+		// 토큰 만료 체크
+		if (randomPushService.isExpired(existRandomPush)) {
+			return ApiResultDto.fail("token is expired");
+		}
+
+		// 뿌리기 검증
 		RandomPush randomPush = new RandomPush(requestDto);
 		if (randomPushService.validate(existRandomPush, randomPush)) {
-			return ApiResult.fail();
+			return ApiResultDto.fail("validation fail");
 		}
 
 		// 뿌리기 발급
-		Integer publishPrice = randomPushService.publishToken(existRandomPush, randomPush);
-		return new ApiResult(publishPrice);
+		Integer publishPrice = randomPushService.publish(existRandomPush, randomPush);
+		return new ApiResultDto(publishPrice);
 	}
 
 	/**
@@ -73,13 +72,13 @@ public class RandomPushController {
 	 * @return
 	 */
 	@GetMapping("/status")
-	public ApiResult<RandomPushStatusDto> search(@RequestBody RandomPushRequestDto requestDto) {
+	public ApiResultDto<RandomPushStatusDto> search(@RequestBody RandomPushRequestDto requestDto) {
 		RandomPushStatusDto randomPushStatus = randomPushService.getRandomPushStatus(requestDto);
-		return new ApiResult<>(randomPushStatus);
+		return new ApiResultDto<>(randomPushStatus);
 	}
 
 	@ExceptionHandler
-	public ApiResult handleException(Exception ex) {
-		return ApiResult.fail(ex.getMessage());
+	public ApiResultDto handleException(Exception ex) {
+		return ApiResultDto.fail(ex.getMessage());
 	}
 }
