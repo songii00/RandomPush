@@ -78,13 +78,17 @@ url : POST /event/random-push/publish
 
 |파라미터명|타입|비고|
 |------|---|---|
-|token|int|String|
+|token|String||
    
 3. 조회 API 
    - 발급현황 조회 
    
 - Request 정보<BR>
 url : GET /event/random-push/status
+    
+|파라미터명|타입|비고|
+|------|---|---|
+|token|String||
 
 ### 도메인 모델 클래스 다이어그램
 <img width="682" alt="스크린샷 2020-06-27 오후 12 17 47" src="https://user-images.githubusercontent.com/22117193/85913476-3f88cf80-b870-11ea-9028-148ab35aac3f.png">
