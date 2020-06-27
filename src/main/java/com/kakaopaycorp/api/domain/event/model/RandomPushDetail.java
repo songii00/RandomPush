@@ -11,6 +11,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class RandomPushDetail {
+
 	private Integer randomPushDetailNo; // pk
 	private Integer randomPushNo; // autoIncrament
 	/**

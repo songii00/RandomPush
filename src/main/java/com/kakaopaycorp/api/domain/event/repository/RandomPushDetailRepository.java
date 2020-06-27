@@ -20,8 +20,4 @@ public class RandomPushDetailRepository {
 	public List<RandomPushDetail> findByRandomPushNo(Integer randomPushNo) {
 		return null;
 	}
-
-	public List<RandomPushDetail> findBy(String tokenId, String roomId) {
-		return null;
-	}
 }

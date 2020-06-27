@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.kakaopaycorp.api.domain.event.dto.ApiResultDto;
 import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
-import com.kakaopaycorp.api.domain.event.dto.RandomPushSearchDto;
-import com.kakaopaycorp.api.domain.event.dto.RandomPushStatusDto;
 import com.kakaopaycorp.api.domain.event.model.RandomPush;
 import com.kakaopaycorp.api.domain.event.service.RandomPushService;
 
@@ -47,16 +45,16 @@ public class RandomPushController {
 	 */
 	@PostMapping("/publish")
 	public ApiResultDto<Integer> publish(@RequestBody RandomPushRequestDto requestDto) {
-		RandomPush existRandomPush = randomPushService.getRandomPush(new RandomPushSearchDto(requestDto.getToken(),
-																							 requestDto.getRoomId(),
-																							 null));
+		RandomPush existRandomPush = randomPushService.getRandomPush(new RandomPushRequestDto.Search(requestDto.getToken(),
+																									 requestDto.getRoomId(),
+																									 null));
 		// 토큰 만료 체크
 		if (randomPushService.isExpired(existRandomPush)) {
 			return ApiResultDto.fail("token is expired");
 		}
 
 		// 뿌리기 검증
-		RandomPush randomPush = new RandomPush(requestDto);
+		RandomPush randomPush = requestDto.toEntity();
 		if (randomPushService.validate(existRandomPush, randomPush)) {
 			return ApiResultDto.fail("validation fail");
 		}
@@ -72,8 +70,8 @@ public class RandomPushController {
 	 * @return
 	 */
 	@GetMapping("/status")
-	public ApiResultDto<RandomPushStatusDto> search(@RequestBody RandomPushRequestDto requestDto) {
-		RandomPushStatusDto randomPushStatus = randomPushService.getRandomPushStatus(requestDto);
+	public ApiResultDto<RandomPushRequestDto.Status> search(@RequestBody RandomPushRequestDto requestDto) {
+		RandomPushRequestDto.Status randomPushStatus = randomPushService.getRandomPushStatus(requestDto);
 		return new ApiResultDto<>(randomPushStatus);
 	}
 

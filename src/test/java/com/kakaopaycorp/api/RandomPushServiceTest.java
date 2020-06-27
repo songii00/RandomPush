@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import lombok.extern.slf4j.Slf4j;
 
+import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
 import com.kakaopaycorp.api.domain.event.model.RandomPush;
 import com.kakaopaycorp.api.domain.event.model.RandomPushDetail;
 import com.kakaopaycorp.api.domain.event.repository.RandomPushDetailRepository;

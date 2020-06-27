@@ -1,8 +1,10 @@
 package com.kakaopaycorp.api.domain.event.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 @AllArgsConstructor
+@Getter
 public class ApiResultDto<T> {
 
 	private static final String SUCCESS_CODE = "0";

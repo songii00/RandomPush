@@ -8,8 +8,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
-
 
 /**
  * 뿌리기
@@ -48,12 +46,4 @@ public class RandomPush {
 
 	private List<RandomPushDetail> details;
 
-
-	public RandomPush(RandomPushRequestDto request) {
-		this.pushPrice = request.getTotalPushPrice();
-		this.roomId = request.getRoomId();
-		this.token = request.getToken();
-		this.registDateTime = LocalDateTime.now();
-		this.registUserId = request.getUserId();
-	}
 }

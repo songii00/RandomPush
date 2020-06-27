@@ -9,8 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
-import com.kakaopaycorp.api.domain.event.dto.RandomPushSearchDto;
-import com.kakaopaycorp.api.domain.event.dto.RandomPushStatusDto;
+import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto.Search;
+import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto.Status.PublishedInfo;
 import com.kakaopaycorp.api.domain.event.model.RandomPush;
 import com.kakaopaycorp.api.domain.event.model.RandomPushDetail;
 import com.kakaopaycorp.api.domain.event.repository.RandomPushDetailRepository;
@@ -34,8 +34,11 @@ public class RandomPushService {
 	 * @param requestDto
 	 */
 	public void save(RandomPushRequestDto requestDto) {
-		List<RandomPushDetail> randomPushDetailes = devide(requestDto);
-		Integer randomPushNo = randomPushRepository.save(new RandomPush(requestDto));
+
+		requestDto.setToken(this.getHashKeyBy(requestDto.getToken()));
+		Integer randomPushNo = randomPushRepository.save(requestDto.toEntity());
+
+		List<RandomPushDetail> randomPushDetailes = divde(requestDto);
 		randomPushDetailes.stream().forEach(detail -> detail.setRandomPushNo(randomPushNo));
 		randomPushDetailRepository.save(randomPushDetailes);
 	}
@@ -46,7 +49,7 @@ public class RandomPushService {
 	 * @param requestDto
 	 * @return
 	 */
-	private List<RandomPushDetail> devide(RandomPushRequestDto requestDto) {
+	private List<RandomPushDetail> divde(RandomPushRequestDto requestDto) {
 		int totalPushPrice = requestDto.getTotalPushPrice();
 		int userCount = requestDto.getUserCount();
 		List<Integer> randomPrices = getRandomPrices(totalPushPrice, userCount);
@@ -58,6 +61,13 @@ public class RandomPushService {
 																		.build()).collect(Collectors.toList());
 	}
 
+	/**
+	 * 랜덤 금액 구하기
+	 *
+	 * @param totalPushPrice
+	 * @param userCount
+	 * @return
+	 */
 	private List<Integer> getRandomPrices(int totalPushPrice, int userCount) {
 
 		ArrayList<Integer> randomPrices = new ArrayList<>();
@@ -69,15 +79,17 @@ public class RandomPushService {
 				continue;
 			}
 
-			int price = ((int) (Math.random() * totalPushPrice) + 100) / 100;
+			int price = ((int) (Math.random() * (totalPushPrice / userCount)) + 11);
+			price = price - (price % 10);
 			totalPushPrice -= price;
 			randomPrices.add(price);
 		}
 		return randomPrices;
 	}
 
-	public RandomPushStatusDto getRandomPushStatus(RandomPushRequestDto requestDto) {
-		RandomPush randomPush = randomPushRepository.findBy(new RandomPushSearchDto(requestDto.getToken(), requestDto.getRoomId(), null));
+	public RandomPushRequestDto.Status getRandomPushStatus(RandomPushRequestDto requestDto) {
+		RandomPush randomPush =
+				randomPushRepository.findBy(new Search(requestDto.getToken(), requestDto.getRoomId(), null));
 
 		// 뿌린 사람 자신만 조회
 		if (!randomPush.getRegistUserId().equals(requestDto.getUserId())) {
@@ -85,28 +97,28 @@ public class RandomPushService {
 		}
 
 		// 뿌린 건에 대해 7일간 조회
-		if (randomPush.getRegistDateTime().plusDays(7).isBefore(LocalDateTime.now())) {
+		if (LocalDateTime.now().minusDays(7).isAfter(randomPush.getRegistDateTime())) {
 			throw new IllegalArgumentException("expire search request");
 		}
 
-		List<RandomPushDetail> details = randomPushDetailRepository.findByRandomPushNo(randomPush.getRandomPushNo());
-		List<RandomPushStatusDto.publishedInfo> publishedInfos
+		List<RandomPushDetail> details = randomPush.getDetails();
+		List<PublishedInfo> publishedInfos
 				= details.stream()
 						 .filter(RandomPushDetail::isUseYn)
-						 .map(detail -> new RandomPushStatusDto.publishedInfo(detail.getPublishedPrice(), detail.getRegistUserId()))
+						 .map(detail -> new PublishedInfo(detail.getPublishedPrice(),
+														  detail.getRegistUserId()))
 						 .collect(Collectors.toList());
 
-
-		return RandomPushStatusDto.builder()
-								  .pushTime(randomPush.getRegistDateTime())
-								  .pushPrice(randomPush.getPushPrice())
-								  .publishedPrice(randomPush.getPublishedPrice())
-								  .publishedInfos(publishedInfos)
-								  .build();
+		return RandomPushRequestDto.Status.builder()
+										  .pushTime(randomPush.getRegistDateTime())
+										  .pushPrice(randomPush.getPushPrice())
+										  .publishedPrice(randomPush.getPublishedPrice())
+										  .publishedInfos(publishedInfos)
+										  .build();
 	}
 
-	public RandomPush getRandomPush(RandomPushSearchDto searchDto) {
-		return randomPushRepository.findBy(searchDto);
+	public RandomPush getRandomPush(Search search) {
+		return randomPushRepository.findBy(search);
 	}
 
 	/**
@@ -180,6 +192,7 @@ public class RandomPushService {
 	 * @return
 	 */
 	public boolean isExpired(RandomPush randomPush) {
+
 		return LocalDateTime.now().minusMinutes(10).isAfter(randomPush.getRegistDateTime());
 	}
 
@@ -189,11 +202,10 @@ public class RandomPushService {
 	 * @return
 	 */
 	public String publishToken() {
-		String token = TokenKeygen.publishToken();
-		return getHashKeyBy(token);
+		return TokenKeygen.publishToken();
 	}
 
-	private String getHashKeyBy(String token) {
+	public String getHashKeyBy(String token) {
 		return TokenKeygen.getHashKeyBy(token);
 	}
 }
