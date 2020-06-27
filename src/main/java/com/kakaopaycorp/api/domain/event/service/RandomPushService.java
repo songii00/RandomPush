@@ -16,8 +16,9 @@ import com.kakaopaycorp.api.domain.event.model.RandomPush;
 import com.kakaopaycorp.api.domain.event.model.RandomPushDetail;
 import com.kakaopaycorp.api.domain.event.repository.RandomPushDetailRepository;
 import com.kakaopaycorp.api.domain.event.repository.RandomPushRepository;
-import com.kakaopaycorp.api.global.web.annotation.RedisCacheEvict;
-import com.kakaopaycorp.api.global.web.annotation.RedisCacheable;
+import com.kakaopaycorp.api.global.cache.RedisPrefix;
+import com.kakaopaycorp.api.global.cache.annotation.RedisCacheEvict;
+import com.kakaopaycorp.api.global.cache.annotation.RedisCacheable;
 
 @Service
 public class RandomPushService {
@@ -96,10 +97,8 @@ public class RandomPushService {
 	 * @param requestDto
 	 * @return
 	 */
-	@RedisCacheable
 	public RandomPushRequestDto.Status getRandomPushStatus(RandomPushRequestDto requestDto) {
-		RandomPush randomPush =
-				randomPushRepository.findBy(new Search(requestDto.getToken(), requestDto.getRoomId(), null));
+		RandomPush randomPush = getRandomPush(new Search(requestDto.getToken(), requestDto.getRoomId(), null));
 
 		if (validateStatus(requestDto, randomPush)) {
 			throw new IllegalArgumentException("validation fail");
@@ -141,7 +140,7 @@ public class RandomPushService {
 		return true;
 	}
 
-	@RedisCacheable
+	@RedisCacheable(prefix = RedisPrefix.RANDOM_PUSH, ids = {"@search#token", "@search#roomId"})
 	public RandomPush getRandomPush(Search search) {
 		return randomPushRepository.findBy(search);
 	}
@@ -211,8 +210,8 @@ public class RandomPushService {
 		return detail.getPublishedPrice();
 	}
 
-	@RedisCacheEvict
-	public void deleteCache() {
+	@RedisCacheEvict(prefix = RedisPrefix.RANDOM_PUSH, ids = {"@randomPush#token", "@randomPush#roomId"})
+	public void deleteRandomPushCache(RandomPush randomPush) {
 		// 기존 캐시 삭제
 	}
 

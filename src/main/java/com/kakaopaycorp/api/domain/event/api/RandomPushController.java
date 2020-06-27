@@ -60,7 +60,7 @@ public class RandomPushController {
 		}
 
 		// 뿌리기 발급
-		randomPushService.deleteCache();
+		randomPushService.deleteRandomPushCache(existRandomPush);
 		Integer publishPrice = randomPushService.publish(existRandomPush, randomPush);
 		return new ApiResultDto(publishPrice);
 	}
@@ -71,7 +71,7 @@ public class RandomPushController {
 	 * @return
 	 */
 	@GetMapping("/status")
-	public ApiResultDto<RandomPushRequestDto.Status> search(@RequestBody RandomPushRequestDto requestDto) {
+	public ApiResultDto<RandomPushRequestDto.Status> search(@ModelAttribute RandomPushRequestDto requestDto) {
 		RandomPushRequestDto.Status randomPushStatus = randomPushService.getRandomPushStatus(requestDto);
 		return new ApiResultDto<>(randomPushStatus);
 	}

@@ -1,4 +1,4 @@
-package com.kakaopaycorp.api.global.web.annotation;
+package com.kakaopaycorp.api.global.cache.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -11,4 +11,17 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RedisCacheEvict {
+	/**
+	 * 구분자
+	 *
+	 * @return
+	 */
+	String prefix() default "";
+
+	/**
+	 * 아이디
+	 *
+	 * @return
+	 */
+	String[] ids();
 }
