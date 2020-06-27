@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
@@ -15,6 +16,8 @@ import com.kakaopaycorp.api.domain.event.model.RandomPush;
 import com.kakaopaycorp.api.domain.event.model.RandomPushDetail;
 import com.kakaopaycorp.api.domain.event.repository.RandomPushDetailRepository;
 import com.kakaopaycorp.api.domain.event.repository.RandomPushRepository;
+import com.kakaopaycorp.api.global.web.annotation.RedisCacheEvict;
+import com.kakaopaycorp.api.global.web.annotation.RedisCacheable;
 
 @Service
 public class RandomPushService {
@@ -33,13 +36,14 @@ public class RandomPushService {
 	 *
 	 * @param requestDto
 	 */
+	@Transactional
 	public void save(RandomPushRequestDto requestDto) {
 
 		requestDto.setToken(this.getHashKeyBy(requestDto.getToken()));
 		Integer randomPushNo = randomPushRepository.save(requestDto.toEntity());
 
-		List<RandomPushDetail> randomPushDetailes = divde(requestDto);
-		randomPushDetailes.stream().forEach(detail -> detail.setRandomPushNo(randomPushNo));
+		List<RandomPushDetail> randomPushDetailes = getRandomPushDetail(requestDto);
+		randomPushDetailes.forEach(detail -> detail.setRandomPushNo(randomPushNo));
 		randomPushDetailRepository.save(randomPushDetailes);
 	}
 
@@ -49,7 +53,7 @@ public class RandomPushService {
 	 * @param requestDto
 	 * @return
 	 */
-	private List<RandomPushDetail> divde(RandomPushRequestDto requestDto) {
+	private List<RandomPushDetail> getRandomPushDetail(RandomPushRequestDto requestDto) {
 		int totalPushPrice = requestDto.getTotalPushPrice();
 		int userCount = requestDto.getUserCount();
 		List<Integer> randomPrices = getRandomPrices(totalPushPrice, userCount);
@@ -73,7 +77,6 @@ public class RandomPushService {
 		ArrayList<Integer> randomPrices = new ArrayList<>();
 		for (int i = 0; i < userCount; i++) {
 
-			//맨 마지막 숫자의 경우
 			if (i == userCount - 1) {
 				randomPrices.add(totalPushPrice);
 				continue;
@@ -87,18 +90,19 @@ public class RandomPushService {
 		return randomPrices;
 	}
 
+	/**
+	 * 상태 조회
+	 *
+	 * @param requestDto
+	 * @return
+	 */
+	@RedisCacheable
 	public RandomPushRequestDto.Status getRandomPushStatus(RandomPushRequestDto requestDto) {
 		RandomPush randomPush =
 				randomPushRepository.findBy(new Search(requestDto.getToken(), requestDto.getRoomId(), null));
 
-		// 뿌린 사람 자신만 조회
-		if (!randomPush.getRegistUserId().equals(requestDto.getUserId())) {
-			throw new IllegalArgumentException("invalid userId");
-		}
-
-		// 뿌린 건에 대해 7일간 조회
-		if (LocalDateTime.now().minusDays(7).isAfter(randomPush.getRegistDateTime())) {
-			throw new IllegalArgumentException("expire search request");
+		if (validateStatus(requestDto, randomPush)) {
+			throw new IllegalArgumentException("validation fail");
 		}
 
 		List<RandomPushDetail> details = randomPush.getDetails();
@@ -117,6 +121,27 @@ public class RandomPushService {
 										  .build();
 	}
 
+	/**
+	 * 상태 조회 검증
+	 *
+	 * @param requestDto
+	 * @param randomPush
+	 * @return
+	 */
+	private boolean validateStatus(RandomPushRequestDto requestDto, RandomPush randomPush) {
+		// 뿌린 사람 자신만 조회
+		if (!randomPush.getRegistUserId().equals(requestDto.getUserId())) {
+			return false;
+		}
+
+		// 뿌린 건에 대해 7일간 조회
+		if (LocalDateTime.now().minusDays(7).isAfter(randomPush.getRegistDateTime())) {
+			return false;
+		}
+		return true;
+	}
+
+	@RedisCacheable
 	public RandomPush getRandomPush(Search search) {
 		return randomPushRepository.findBy(search);
 	}
@@ -128,7 +153,7 @@ public class RandomPushService {
 	 * @param randomPush
 	 * @return
 	 */
-	public boolean validate(RandomPush existRandomPush, RandomPush randomPush) {
+	public boolean validatePublish(RandomPush existRandomPush, RandomPush randomPush) {
 
 		// 등록 사용자와 동일한 사용자인지 검증
 		if (existRandomPush.getRegistUserId().equals(randomPush.getRegistUserId())) {
@@ -169,6 +194,7 @@ public class RandomPushService {
 	 * @param randomPush
 	 * @return
 	 */
+	@Transactional
 	public Integer publish(RandomPush existRandomPush, RandomPush randomPush) {
 		List<RandomPushDetail> details = existRandomPush.getDetails();
 
@@ -185,6 +211,11 @@ public class RandomPushService {
 		return detail.getPublishedPrice();
 	}
 
+	@RedisCacheEvict
+	public void deleteCache() {
+		// 기존 캐시 삭제
+	}
+
 	/**
 	 * 뿌린 건 유효시간 만료 체크
 	 *
@@ -192,7 +223,6 @@ public class RandomPushService {
 	 * @return
 	 */
 	public boolean isExpired(RandomPush randomPush) {
-
 		return LocalDateTime.now().minusMinutes(10).isAfter(randomPush.getRegistDateTime());
 	}
 
@@ -205,7 +235,13 @@ public class RandomPushService {
 		return TokenKeygen.publishToken();
 	}
 
-	public String getHashKeyBy(String token) {
+	/**
+	 * 해쉬키 변경
+	 *
+	 * @param token
+	 * @return
+	 */
+	private String getHashKeyBy(String token) {
 		return TokenKeygen.getHashKeyBy(token);
 	}
 }

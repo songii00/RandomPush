@@ -16,7 +16,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.kakaopaycorp.api.domain.event.dto.RandomPushRequestDto;
 import com.kakaopaycorp.api.domain.event.model.RandomPush;
 import com.kakaopaycorp.api.domain.event.model.RandomPushDetail;
 import com.kakaopaycorp.api.domain.event.repository.RandomPushDetailRepository;
@@ -46,21 +45,21 @@ public class RandomPushServiceTest {
 	}
 
 	@Test
-	public void 뿌린건_유효시간_만료_체크() {
+	void 뿌린건_유효시간_만료_체크() {
 		RandomPush randomPush = new RandomPush();
 		given(randomPush.getRegistDateTime()).willReturn(LocalDateTime.now().minusMinutes(15));
 		Assertions.assertTrue(randomPushService.isExpired(randomPush));
 	}
 
 	@Test
-	public void 뿌리기_검증_동일사용자() {
+	void 뿌리기_검증_동일사용자() {
 		RandomPush randomPush = new RandomPush();
 		given(randomPush.getRegistUserId()).willReturn("1234");
-		Assertions.assertFalse(randomPushService.validate(randomPush, randomPush));
+		Assertions.assertFalse(randomPushService.validatePublish(randomPush, randomPush));
 	}
 
 	@Test
-	public void 뿌리기_검증_이미발급받은사용자() {
+	void 뿌리기_검증_이미발급받은사용자() {
 		RandomPush randomPush = RandomPush.builder()
 										  .registUserId("abc")
 										  .roomId("1").build();
@@ -77,11 +76,11 @@ public class RandomPushServiceTest {
 											   .details(randomPushDetailLists)
 											   .build();
 
-		Assertions.assertFalse(randomPushService.validate(existRandomPush, randomPush));
+		Assertions.assertFalse(randomPushService.validatePublish(existRandomPush, randomPush));
 	}
 
 	@Test
-	public void 뿌리기_발급() {
+	void 뿌리기_발급() {
 		RandomPush randomPush = RandomPush.builder()
 										  .registUserId("abc")
 										  .build();

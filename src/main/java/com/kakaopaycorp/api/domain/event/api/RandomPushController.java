@@ -44,7 +44,7 @@ public class RandomPushController {
 	 * @return
 	 */
 	@PostMapping("/publish")
-	public ApiResultDto<Integer> publish(@RequestBody RandomPushRequestDto requestDto) {
+	public ApiResultDto publish(@RequestBody RandomPushRequestDto requestDto) {
 		RandomPush existRandomPush = randomPushService.getRandomPush(new RandomPushRequestDto.Search(requestDto.getToken(),
 																									 requestDto.getRoomId(),
 																									 null));
@@ -55,11 +55,12 @@ public class RandomPushController {
 
 		// 뿌리기 검증
 		RandomPush randomPush = requestDto.toEntity();
-		if (randomPushService.validate(existRandomPush, randomPush)) {
+		if (randomPushService.validatePublish(existRandomPush, randomPush)) {
 			return ApiResultDto.fail("validation fail");
 		}
 
 		// 뿌리기 발급
+		randomPushService.deleteCache();
 		Integer publishPrice = randomPushService.publish(existRandomPush, randomPush);
 		return new ApiResultDto(publishPrice);
 	}

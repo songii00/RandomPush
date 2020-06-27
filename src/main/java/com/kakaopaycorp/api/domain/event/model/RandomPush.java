@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RandomPush {
 
-	private Integer randomPushNo; // pk
+	private Integer randomPushNo;
 	/**
 	 * 뿌릴 금액
 	 */

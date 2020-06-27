@@ -12,8 +12,8 @@ import lombok.Getter;
 @Builder
 public class RandomPushDetail {
 
-	private Integer randomPushDetailNo; // pk
-	private Integer randomPushNo; // autoIncrament
+	private Integer randomPushDetailNo;
+	private Integer randomPushNo;
 	/**
 	 * 분배 금액
 	 */
